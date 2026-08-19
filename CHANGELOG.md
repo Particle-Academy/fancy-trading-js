@@ -40,9 +40,14 @@ yet and saying so is more useful than implying otherwise.
   report becomes impossible to produce. `markExecutable` is idempotent so a
   re-triggering stop does not reset the clock.
 
+- **A `shared/trading-pnl` conformance table** in `fancy-conformance`, wired up
+  in `tests/conformance.test.ts`. 11 rows covering the three-way cost-basis
+  disagreement, position flips, inverse-contract non-linearity and the futures
+  multiplier — so the eventual PHP and Python twins are checked against the same
+  table rather than trusted.
+
 ### Notes
 
-- **Zero runtime dependencies**, and that is a maintained property rather than a
-  current fact.
-- Tests run on **Node's built-in test runner**; no third-party packages are
-  installed in this repo. See `AGENTS.md`.
+- **Zero RUNTIME dependencies**, and that is a maintained property rather than a
+  current fact — `dependencies` is empty and the allowlist gate keeps it honest.
+- Tests run on **vitest**, matching every sibling package.

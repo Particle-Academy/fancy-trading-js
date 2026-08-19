@@ -16,6 +16,7 @@
  */
 
 import { type Decimal, ZERO, add, cmp, div, mul, sub } from "./decimal.ts";
+import type { Side } from "./position.ts";
 
 // ─── FIX-derived vocabulary ──────────────────────────────────────────────────
 
@@ -148,7 +149,9 @@ export function canTransition(from: OrdStatus, to: OrdStatus): boolean {
 
 // ─── The order ───────────────────────────────────────────────────────────────
 
-export type Side = "buy" | "sell";
+// Re-exported from position.ts so the two modules name ONE type. Declaring it
+// twice makes `export *` from both ambiguous at the package entry.
+export type { Side } from "./position.ts";
 export type OrderType = "market" | "limit" | "stop" | "stopLimit" | "trailingStop";
 export type TimeInForce = "day" | "gtc" | "gtd" | "ioc" | "fok" | "opg" | "cls";
 

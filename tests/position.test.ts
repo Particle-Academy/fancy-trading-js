@@ -1,5 +1,4 @@
-import { test, describe } from "node:test";
-import assert from "node:assert/strict";
+import { describe, expect, test } from "vitest";
 import { formatDecimal, parseDecimal as P, dec } from "../src/decimal.ts";
 import {
   applyFill,
@@ -42,11 +41,8 @@ describe("the worked example where the methods disagree", () => {
       let pos = emptyPosition(basis);
       for (const f of seq) pos = applyFill(pos, f, equity).position;
       const r = applyFill(pos, fill("sell", "100", "25.00", 3), equity);
-      assert.equal(formatDecimal(r.position.realised), expected[basis].realised);
-      assert.equal(
-        formatDecimal(unrealised(r.position, P("25.00", 2), equity)),
-        expected[basis].unrealised,
-      );
+      expect(formatDecimal(r.position.realised)).toBe(expected[basis].realised);
+      expect(formatDecimal(unrealised(r.position, P("25.00", 2), equity))).toBe(expected[basis].unrealised);
     });
   }
 
@@ -57,7 +53,7 @@ describe("the worked example where the methods disagree", () => {
       pos = applyFill(pos, fill("sell", "100", "25.00", 3), equity).position;
       const total = Number(formatDecimal(pos.realised)) +
         Number(formatDecimal(unrealised(pos, P("25.00", 2), equity)));
-      assert.equal(total, 2000, `${basis} should total 2000`);
+      expect(total, `${basis} should total 2000`).toBe(2000);
     }
   });
 });
@@ -71,16 +67,12 @@ describe("position flip — the classic bug", () => {
       pos = applyFill(pos, fill("buy", "100", "10.00", 1), equity).position;
       const r = applyFill(pos, fill("sell", "150", "20.00", 2), equity);
 
-      assert.equal(formatDecimal(r.position.qty), "-50", "should be short 50");
-      assert.equal(formatDecimal(r.realisedDelta), "1000.00", "realises on the 100 closed");
+      expect(formatDecimal(r.position.qty), "should be short 50").toBe("-50");
+      expect(formatDecimal(r.realisedDelta), "realises on the 100 closed").toBe("1000.00");
       // The new short's basis is the SELL price, so at a mark of 20 it is flat.
-      assert.equal(
-        formatDecimal(unrealised(r.position, P("20.00", 2), equity)),
-        "0.00",
-        "new short must be based at 20.00, not at the old 10.00",
-      );
+      expect(formatDecimal(unrealised(r.position, P("20.00", 2), equity)), "new short must be based at 20.00, not at the old 10.00").toBe("0.00");
       // And it profits as price falls.
-      assert.equal(formatDecimal(unrealised(r.position, P("18.00", 2), equity)), "100.00");
+      expect(formatDecimal(unrealised(r.position, P("18.00", 2), equity))).toBe("100.00");
     });
   }
 });
@@ -89,18 +81,18 @@ describe("short positions", () => {
   test("a short profits when price falls", () => {
     let pos = emptyPosition("average");
     pos = applyFill(pos, fill("sell", "10", "100.00", 1), equity).position;
-    assert.equal(formatDecimal(pos.qty), "-10");
-    assert.equal(formatDecimal(unrealised(pos, P("90.00", 2), equity)), "100.00");
-    assert.equal(formatDecimal(unrealised(pos, P("110.00", 2), equity)), "-100.00");
+    expect(formatDecimal(pos.qty)).toBe("-10");
+    expect(formatDecimal(unrealised(pos, P("90.00", 2), equity))).toBe("100.00");
+    expect(formatDecimal(unrealised(pos, P("110.00", 2), equity))).toBe("-100.00");
   });
 
   test("covering a short realises correctly", () => {
     let pos = emptyPosition("fifo");
     pos = applyFill(pos, fill("sell", "10", "100.00", 1), equity).position;
     const r = applyFill(pos, fill("buy", "10", "90.00", 2), equity);
-    assert.equal(formatDecimal(r.realisedDelta), "100.00");
-    assert.equal(formatDecimal(r.position.qty), "0");
-    assert.equal(r.position.lots.length, 0, "flat position holds no lots");
+    expect(formatDecimal(r.realisedDelta)).toBe("100.00");
+    expect(formatDecimal(r.position.qty)).toBe("0");
+    expect(r.position.lots.length, "flat position holds no lots").toBe(0);
   });
 });
 
@@ -111,7 +103,7 @@ describe("futures multiplier", () => {
     let pos = emptyPosition("average");
     pos = applyFill(pos, { ...fill("buy", "2", "4500.00", 1), price: P("4500.00", 2) }, es).position;
     // 2 contracts * $50 * 4 points = $400
-    assert.equal(formatDecimal(unrealised(pos, P("4504.00", 2), es)), "400.00");
+    expect(formatDecimal(unrealised(pos, P("4504.00", 2), es))).toBe("400.00");
   });
 });
 
@@ -135,12 +127,12 @@ describe("inverse contracts are non-linear", () => {
     const down = unrealised(pos, P("45000", 0), inverse);
 
     // 10000 * (1/50000 - 1/55000) = 0.01818181...
-    assert.equal(formatDecimal(up), "0.01818182");
+    expect(formatDecimal(up)).toBe("0.01818182");
     // 10000 * (1/50000 - 1/45000) = -0.02222222...
-    assert.equal(formatDecimal(down), "-0.02222222");
+    expect(formatDecimal(down)).toBe("-0.02222222");
 
     // The asymmetry is the point: a linear formula would give equal magnitudes.
-    assert.notEqual(formatDecimal(up).replace("-", ""), formatDecimal(down).replace("-", ""));
+    expect(formatDecimal(up).replace("-", "")).not.toBe(formatDecimal(down).replace("-", ""));
   });
 
   test("a linear formula would be wrong here, and demonstrably so", () => {
@@ -150,8 +142,8 @@ describe("inverse contracts are non-linear", () => {
       moneyExp: 8,
     });
     const inverseAnswer = closePnl(P("10000", 0), P("50000", 0), P("55000", 0), inverse);
-    assert.equal(formatDecimal(linearAnswer), "50000000.00000000");
-    assert.equal(formatDecimal(inverseAnswer), "0.01818182");
+    expect(formatDecimal(linearAnswer)).toBe("50000000.00000000");
+    expect(formatDecimal(inverseAnswer)).toBe("0.01818182");
   });
 });
 
@@ -160,7 +152,7 @@ describe("averaging and partial reduces", () => {
     let pos = emptyPosition("average");
     pos = applyFill(pos, fill("buy", "100", "10.00", 1), equity).position;
     pos = applyFill(pos, fill("buy", "300", "20.00", 2), equity).position;
-    assert.equal(formatDecimal(averagePrice(pos, 2)), "17.50");
+    expect(formatDecimal(averagePrice(pos, 2))).toBe("17.50");
   });
 
   test("average cost does NOT change the basis on a reduce", () => {
@@ -168,8 +160,8 @@ describe("averaging and partial reduces", () => {
     pos = applyFill(pos, fill("buy", "100", "10.00", 1), equity).position;
     pos = applyFill(pos, fill("buy", "100", "20.00", 2), equity).position;
     const r = applyFill(pos, fill("sell", "50", "30.00", 3), equity);
-    assert.equal(formatDecimal(averagePrice(r.position, 2)), "15.00");
-    assert.equal(formatDecimal(r.position.qty), "150");
+    expect(formatDecimal(averagePrice(r.position, 2))).toBe("15.00");
+    expect(formatDecimal(r.position.qty)).toBe("150");
   });
 
   test("fifo relieves the oldest lot first", () => {
@@ -178,10 +170,10 @@ describe("averaging and partial reduces", () => {
     pos = applyFill(pos, fill("buy", "100", "20.00", 2), equity).position;
     const r = applyFill(pos, fill("sell", "50", "30.00", 3), equity);
     // relieves 50 of the $10 lot -> 50 * 20 = 1000
-    assert.equal(formatDecimal(r.realisedDelta), "1000.00");
-    assert.equal(r.position.lots.length, 2);
-    assert.equal(formatDecimal(r.position.lots[0]!.qty), "50");
-    assert.equal(formatDecimal(r.position.lots[0]!.price), "10.00");
+    expect(formatDecimal(r.realisedDelta)).toBe("1000.00");
+    expect(r.position.lots.length).toBe(2);
+    expect(formatDecimal(r.position.lots[0]!.qty)).toBe("50");
+    expect(formatDecimal(r.position.lots[0]!.price)).toBe("10.00");
   });
 
   test("lifo relieves the newest lot first", () => {
@@ -190,16 +182,13 @@ describe("averaging and partial reduces", () => {
     pos = applyFill(pos, fill("buy", "100", "20.00", 2), equity).position;
     const r = applyFill(pos, fill("sell", "50", "30.00", 3), equity);
     // relieves 50 of the $20 lot -> 50 * 10 = 500
-    assert.equal(formatDecimal(r.realisedDelta), "500.00");
+    expect(formatDecimal(r.realisedDelta)).toBe("500.00");
   });
 });
 
 describe("guards", () => {
   test("a non-positive fill quantity is refused", () => {
     const pos = emptyPosition("fifo");
-    assert.throws(
-      () => applyFill(pos, { side: "buy", qty: P("0", 0), price: P("1.00", 2), at: 0 }, equity),
-      /must be positive/,
-    );
+    expect(() => applyFill(pos, { side: "buy", qty: P("0", 0), price: P("1.00", 2), at: 0 }, equity)).toThrow(/must be positive/);
   });
 });

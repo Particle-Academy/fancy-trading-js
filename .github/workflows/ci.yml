@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Third-party dependency allowlist. Cheap, and failing here is cheap --
+      # the same check gates the release, so a PR that adds an unapproved or
+      # abandoned dependency finds out now rather than at tag time.
+      # The allowlist is FETCHED, never vendored: one source, no copies to drift.
+      - name: Fetch the third-party allowlist
+        uses: actions/checkout@v4
+        with:
+          repository: Particle-Academy/.github
+          path: .third-party-allowlist
+          persist-credentials: false
+
+      - name: Third-party dependency allowlist
+        run: |
+          node .third-party-allowlist/third-party/check.mjs --repo .
+          # Delete it. A fetched checkout left lying in the workspace is not
+          # inert: vitest globbed the checker's own tests out of it and failed
+          # a package whose code was fine. Removed with node, not rm -rf,
+          # because some of these matrices run on windows-latest where a
+          # multi-line run: block is PowerShell and rm -rf is not a command.
+          node -e "require('node:fs').rmSync('.third-party-allowlist',{recursive:true,force:true})"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      # Standalone CI has no pnpm workspace, so rewrite any `workspace:*` deps to
+      # a plain range before install. A no-op when there are none.
+      - name: Rewrite workspace protocol
+        run: |
+          node -e "const fs=require('fs');const p=JSON.parse(fs.readFileSync('package.json','utf8'));for(const s of ['dependencies','devDependencies','peerDependencies','optionalDependencies']){if(!p[s])continue;for(const[n,v]of Object.entries(p[s])){if(typeof v==='string'&&v.startsWith('workspace:'))p[s][n]=v.slice('workspace:'.length)||'*';}}fs.writeFileSync('package.json',JSON.stringify(p,null,2)+'\n');"
+
+      - name: Install
+        run: npm install --no-audit --no-fund --legacy-peer-deps
+
+      - name: Lint
+        run: npm run lint --if-present
+
+      - name: Test
+        run: npm test --if-present
+
+      - name: Build
+        run: npm run build --if-present

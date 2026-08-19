@@ -84,23 +84,27 @@ and it has its own test.
 ## Commands
 
 ```bash
-npm test        # node --test over tests/*.ts — no install required
-npm run typecheck
+npm test        # vitest run
+npm run lint    # tsc --noEmit && eslint .
+npm run build   # tsup
 ```
 
 ## Conventions
 
-- **Tests run on Node's built-in runner** (`node:test` + `node:assert`), not
-  vitest, because this package currently has **no `node_modules` at all** — no
-  third-party code has been installed here. That is a deliberate state under the
-  standing approval rule, not an oversight. Converting to vitest is a small
-  change once the toolchain is approved; the assertions are the same shape.
-- **`erasableSyntaxOnly` is on** in `tsconfig.json`. Node's type-stripping does
-  NOT support TypeScript parameter properties (`constructor(public readonly x)`)
-  or enums — the compiler flag makes that a type error rather than a runtime
-  surprise.
-- Import paths carry the **`.ts` extension**, which is what lets Node run the
-  sources directly.
+- **vitest**, matching every sibling package — `npm test` is `vitest run`, lint
+  is `tsc --noEmit && eslint .`, build is `tsup`, and CI is the canonical
+  `ci.yml` with the third-party allowlist gate ahead of install.
+- **`erasableSyntaxOnly` is on** in `tsconfig.json`, so TypeScript parameter
+  properties (`constructor(public readonly x)`) and enums are a compile error.
+  They are not erasable, which rules out running the sources directly under a
+  type-stripping runtime — worth keeping even though vitest would tolerate them.
+- Import paths carry the **`.ts` extension**.
+- **`Side` is declared once, in `position.ts`,** and re-exported by `order.ts`.
+  Declaring it in both made `export *` from both ambiguous at the package entry
+  — a real `TS2308` that only shows up in `src/index.ts`.
+- **`console` is declared in `tests/env.d.ts`, not by installing `@types/node`.**
+  This is a browser-agnostic package and Node's globals must not typecheck clean
+  in `src/`.
 - `Decimal` is a plain `{ v, exp }` object so it is structurally comparable and
   cheap. It is deliberately **not** JSON-serialisable as-is (`bigint`); use
   `formatDecimal` at the wire boundary.
