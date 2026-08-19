@@ -1,0 +1,33 @@
+{
+  "name": "@particle-academy/fancy-trading",
+  "version": "0.1.0",
+  "description": "Headless trading domain core for the Fancy UI suite — exact decimal money, instrument shapes across equities/futures/perpetuals/event markets, the FIX-derived order lifecycle, and position + P&L arithmetic with average-cost and FIFO. Zero runtime dependencies.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Particle-Academy/fancy-trading-js.git"
+  },
+  "homepage": "https://github.com/Particle-Academy/fancy-trading-js#readme",
+  "bugs": "https://github.com/Particle-Academy/fancy-trading-js/issues",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
+      "require": { "types": "./dist/index.d.cts", "default": "./dist/index.cjs" }
+    }
+  },
+  "files": ["dist", "README.md", "NOTICE"],
+  "scripts": {
+    "test": "node --test \"tests/*.test.ts\"",
+    "test:watch": "node --test --watch \"tests/*.test.ts\"",
+    "typecheck": "tsc --noEmit",
+    "build": "tsup"
+  },
+  "keywords": ["trading", "finance", "order-book", "pnl", "fix-protocol", "decimal", "headless"],
+  "dependencies": {},
+  "publishConfig": { "access": "public" },
+  "license": "MIT",
+  "engines": { "node": ">=22" }
+}
