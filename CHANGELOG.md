@@ -32,6 +32,13 @@ yet and saying so is more useful than implying otherwise.
   from `approve()`. Not defeatable by any option.
 - **`isReconciliationBreak()`** — surfaces a disagreement between our view and
   the venue's rather than letting it diverge silently.
+- **`Order.receivedAt` and `Order.becameExecutableAt`**, plus an idempotent
+  `markExecutable()`. SEC Rule 605 measures time-to-execution from the moment an
+  order became EXECUTABLE — not from receipt — for every non-marketable limit and
+  stop order. That moment is driven by market data, so no venue event carries it:
+  **if it is not stamped as it happens it cannot be reconstructed**, and the
+  report becomes impossible to produce. `markExecutable` is idempotent so a
+  re-triggering stop does not reset the clock.
 
 ### Notes
 

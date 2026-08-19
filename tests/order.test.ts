@@ -11,6 +11,7 @@ import {
   canTransition,
   isReconciliationBreak,
   isTerminal,
+  markExecutable,
   newOrder,
   submittable,
   type OrderEvent,
@@ -181,5 +182,39 @@ describe("reconciliation", () => {
     // The venue thinks 7 filled. Silent divergence is how someone finds out at
     // 3pm they have been trading a phantom, so this must be loud.
     assert.equal(isReconciliationBreak(o, ev({ cumQty: P("7", 0), leavesQty: P("3", 0) })), true);
+  });
+});
+
+describe("Rule 605 timestamps — unreconstructable if not stamped live", () => {
+  test("a market order is executable on arrival", () => {
+    const o = newOrder(intent({ type: "market" }), 1000);
+    assert.equal(o.receivedAt, 1000);
+    assert.equal(o.becameExecutableAt, 1000);
+  });
+
+  test("a non-marketable limit is NOT executable on arrival", () => {
+    const o = newOrder(intent({ type: "limit" }), 1000);
+    assert.equal(o.receivedAt, 1000);
+    assert.equal(
+      o.becameExecutableAt,
+      null,
+      "must be null until the market makes it executable — Rule 605 measures from that moment",
+    );
+  });
+
+  test("markExecutable stamps it, and only the FIRST time", () => {
+    let o = newOrder(intent({ type: "stop" }), 1000);
+    o = markExecutable(o, 1500);
+    assert.equal(o.becameExecutableAt, 1500);
+    // A stop that re-triggers must not reset the clock.
+    o = markExecutable(o, 9999);
+    assert.equal(o.becameExecutableAt, 1500);
+  });
+
+  test("receivedAt survives event application", () => {
+    let o = newOrder(intent(), 1000);
+    o = applyEvent(o, ev({ at: 2000 }));
+    assert.equal(o.receivedAt, 1000, "receipt time is not overwritten by updates");
+    assert.equal(o.updatedAt, 2000);
   });
 });

@@ -190,6 +190,23 @@ export type Order = {
   readonly avgPx: Decimal;
   /** A requested change not yet confirmed by the venue. Rendered as an overlay. */
   readonly pendingIntent?: Partial<OrderIntent>;
+  /**
+   * When we received the order. SEC Rule 605 requires time-to-execution
+   * measured "in increments of a millisecond or finer".
+   */
+  readonly receivedAt: number;
+  /**
+   * When the order first became EXECUTABLE — a stop triggering, or a
+   * non-marketable limit becoming marketable.
+   *
+   * Rule 605 measures time-to-execution from THIS moment, not from receipt,
+   * for every non-marketable limit and stop order. It is driven by market
+   * data rather than by an order event, so nothing in the venue's event
+   * stream carries it: **if it is not stamped as it happens it cannot be
+   * reconstructed afterwards**, and the report is then impossible to produce.
+   * `null` while the order has never been executable.
+   */
+  readonly becameExecutableAt: number | null;
   readonly updatedAt: number;
 };
 
@@ -291,8 +308,22 @@ export function newOrder(intent: OrderIntent, at: number = Date.now()): Order {
     cumQty: ZERO(intent.qty.exp),
     leavesQty: intent.qty,
     avgPx: ZERO(intent.limitPrice?.exp ?? 2),
+    receivedAt: at,
+    // A market order is executable on arrival; everything else waits on the
+    // market and must be stamped by whoever is watching it.
+    becameExecutableAt: intent.type === "market" ? at : null,
     updatedAt: at,
   };
+}
+
+/**
+ * Stamp the moment an order first became executable. Idempotent — only the
+ * FIRST transition counts, because Rule 605 measures from it and a stop that
+ * re-triggers must not reset the clock.
+ */
+export function markExecutable(order: Order, at: number): Order {
+  if (order.becameExecutableAt !== null) return order;
+  return { ...order, becameExecutableAt: at };
 }
 
 /**
