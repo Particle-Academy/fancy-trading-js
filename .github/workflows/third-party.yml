@@ -1,0 +1,38 @@
+name: Third-party allowlist
+
+# This repo has no other CI, so this is its only dependency gate.
+#
+# Composer note: Packagist syncs from a pushed tag by webhook, without waiting
+# for Actions. On a tag this workflow is therefore a DETECTOR, not a gate -- it
+# tells you fast that a release carried an unapproved dependency, but it cannot
+# stop the release. The gate that works for Composer packages is the pull
+# request run below, plus the nightly envelope sweep.
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  allowlist:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      # The allowlist is FETCHED, never vendored: one source of truth, so there
+      # is no per-repo copy that can drift out of agreement with it.
+      - name: Fetch the third-party allowlist
+        uses: actions/checkout@v4
+        with:
+          repository: Particle-Academy/.github
+          path: .third-party-allowlist
+          persist-credentials: false
+
+      - name: Third-party dependency allowlist
+        run: node .third-party-allowlist/third-party/check.mjs --repo .
