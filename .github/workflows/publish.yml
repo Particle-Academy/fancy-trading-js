@@ -1,0 +1,75 @@
+name: Publish to npm
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      # Release gate: a tag with no CHANGELOG entry fails HERE, before the
+      # package reaches the registry. It is the one documentation failure that
+      # cannot be repaired later — once the tarball is out, whoever upgraded
+      # into it has no way to learn what changed.
+      - name: Changelog entry for this tag
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          if [ ! -f CHANGELOG.md ]; then
+            echo "::error::No CHANGELOG.md. Every package keeps one."
+            exit 1
+          fi
+          if ! grep -qE "^## +\[?v?${VERSION}\]?" CHANGELOG.md; then
+            echo "::error::CHANGELOG.md has no entry for ${VERSION}. Add one — say what a consumer must DO — then re-tag."
+            exit 1
+          fi
+          echo "Found changelog entry for ${VERSION}."
+
+      - name: package.json matches the tag
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          PKG_VERSION="$(node -p "require('./package.json').version")"
+          if [ "$PKG_VERSION" != "$VERSION" ]; then
+            echo "::error::tag ${VERSION}, package.json ${PKG_VERSION} — both must agree."
+            exit 1
+          fi
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Install
+        run: |
+          npm install --no-audit --no-fund --legacy-peer-deps
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      # Release gate: third-party dependencies must be approved and still
+      # maintained BEFORE the tarball reaches the registry.
+      - name: Fetch the third-party allowlist
+        uses: actions/checkout@v4
+        with:
+          repository: Particle-Academy/.github
+          path: .third-party-allowlist
+          persist-credentials: false
+
+      - name: Third-party dependency allowlist
+        run: |
+          node .third-party-allowlist/third-party/check.mjs --repo .
+          node -e "require('node:fs').rmSync('.third-party-allowlist',{recursive:true,force:true})"
+
+      # Trusted Publishing (OIDC) — no token. npm pinned to 11.18.0: npm 12.0.0
+      # breaks --provenance ("Cannot find module 'sigstore'").
+      - name: Publish
+        run: npx -y npm@11.18.0 publish --provenance --access public
