@@ -9,6 +9,8 @@ yet and saying so is more useful than implying otherwise.
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-08-19
+
 ### Added
 
 - **Exact decimal arithmetic** (`src/decimal.ts`) on `{ v: bigint, exp: number }`
