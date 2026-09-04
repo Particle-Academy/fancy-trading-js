@@ -3,6 +3,8 @@ import {
   add,
   cmp,
   dec,
+  ZERO,
+  type Decimal,
   div,
   formatDecimal,
   fromMinorUnits,
@@ -150,5 +152,54 @@ describe("tick rounding", () => {
 
     expect(formatDecimal(roundToTick(parseDecimal("0.0234", 4), kalshi))).toBe("0.0230");
     expect(formatDecimal(roundToTick(parseDecimal("0.4234", 4), kalshi))).toBe("0.4200");
+  });
+});
+
+describe("a malformed Decimal names itself", () => {
+  // Reported as fancy-trading-js#1. `parseDecimal` accepted a missing `exp` and
+  // returned `{ v, exp: undefined }`. Two consequences, and the SECOND is the
+  // dangerous one: arithmetic threw "Cannot mix BigInt and other types", and
+  // `formatDecimal` silently returned a different number.
+  //
+  //   parseDecimal("1.0")                  -> { v: 10n, exp: undefined }
+  //   formatDecimal(parseDecimal("1.0"))   -> ".10"   <- wrong, no error
+  //
+  // `dec()` already refused a bad `exp`; `parseDecimal` simply did not, and the
+  // two are the only ways in. Nothing downstream can recover a scale that was
+  // never recorded, so the value has to be refused where it is constructed.
+
+  test("refuses a missing exp instead of building a scale-less value", () => {
+    // @ts-expect-error — the type says exp is required; JS callers can omit it.
+    expect(() => parseDecimal("1.0")).toThrow(RangeError);
+    // @ts-expect-error
+    expect(() => parseDecimal("1.0")).toThrow(/exp/);
+  });
+
+  test("refuses a non-integer or negative exp, exactly as dec() does", () => {
+    expect(() => parseDecimal("1.0", 1.5)).toThrow(RangeError);
+    expect(() => parseDecimal("1.0", -1)).toThrow(RangeError);
+  });
+
+  test("still parses correctly once exp is supplied", () => {
+    expect(formatDecimal(parseDecimal("1.0", 1))).toBe("1.0");
+    expect(formatDecimal(add(parseDecimal("0.1", 2), parseDecimal("0.2", 2)))).toBe("0.30");
+  });
+
+  test("blames the malformed VALUE, not the arithmetic that received it", () => {
+    // The original error said "Cannot mix BigInt and other types", which points
+    // at align() rather than at whatever produced the bad input — the reporter
+    // said that cost them a while. Arithmetic now names the offender.
+    const bad = { v: 10n } as unknown as Decimal;
+
+    expect(() => add(bad, dec(1n, 0))).toThrow(TypeError);
+    expect(() => add(bad, dec(1n, 0))).toThrow(/exp/);
+  });
+
+  test("catches ZERO passed without being called", () => {
+    // `ZERO` is a FUNCTION taking an exp, so `add(ZERO, x)` passes the function
+    // itself. It reads like a constant, which is exactly why it needs to say so.
+    expect(() => add(ZERO as unknown as Decimal, dec(1n, 0))).toThrow(TypeError);
+    // And the correct call keeps working.
+    expect(formatDecimal(add(ZERO(2), parseDecimal("1.50", 2)))).toBe("1.50");
   });
 });

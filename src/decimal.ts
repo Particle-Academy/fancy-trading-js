@@ -60,6 +60,24 @@ export function dec(v: bigint | number | string, exp: number): Decimal {
  * string is the only representation that has not already lost precision.
  */
 export function parseDecimal(s: string, exp: number): Decimal {
+  // The same guard `dec()` carries. Without it a caller who omitted `exp` —
+  // legal in plain JS, where the type cannot stop them — got back
+  // `{ v, exp: undefined }`: `frac.length > undefined` is false so the
+  // precision check never fired, and `padEnd(undefined)` left the fraction
+  // unpadded. The result was a value with no scale, which formatted as a
+  // DIFFERENT number (`parseDecimal("1.0")` rendered as ".10") and threw an
+  // unrelated-looking BigInt error the moment it met arithmetic.
+  //
+  // Refused here rather than repaired: nothing downstream can recover a scale
+  // that was never recorded, and guessing one is how a price quietly becomes a
+  // different price. These two constructors are the only ways in, so this is
+  // where it has to be caught. Reported as fancy-trading-js#1.
+  if (!Number.isInteger(exp) || exp < 0) {
+    throw new RangeError(
+      `exp must be a non-negative integer, got ${exp}. ` +
+        `parseDecimal needs the scale explicitly — e.g. parseDecimal(${JSON.stringify(s)}, 2).`,
+    );
+  }
   const t = s.trim();
   const m = /^([+-]?)(\d*)(?:\.(\d*))?$/.exec(t);
   if (!m || (m[2] === "" && (m[3] ?? "") === "")) {
@@ -122,8 +140,37 @@ export function rescale(d: Decimal, exp: number, mode: Rounding = "half-up"): De
   return { v: applyRounding(q, r, den, mode), exp };
 }
 
+/**
+ * Reject a value that is not a well-formed Decimal, naming what is wrong.
+ *
+ * Without this, a malformed operand surfaced from inside `align` as
+ * "Cannot mix BigInt and other types" — an error that points at the
+ * arithmetic rather than at whatever produced the bad input. The consumer who
+ * reported it said that misdirection cost them a while, and they were right
+ * to: the arithmetic was correct the whole time.
+ */
+function assertDecimal(d: Decimal, role: string): void {
+  if (typeof d === "function") {
+    // `ZERO` takes an exp and reads like a constant, so `add(ZERO, x)` passes
+    // the function itself. Common enough to name directly.
+    throw new TypeError(
+      `${role} is a function, not a Decimal — did you mean ZERO(exp)? ` +
+        `exp is missing because the value was never constructed.`,
+    );
+  }
+  if (d === null || typeof d !== "object" || typeof d.v !== "bigint" || !Number.isInteger(d.exp)) {
+    throw new TypeError(
+      `${role} is not a Decimal: expected { v: bigint, exp: integer }, got ` +
+        `${JSON.stringify(d, (_k, v) => (typeof v === "bigint" ? `${v}n` : v))}. ` +
+        `Build one with dec() or parseDecimal(value, exp).`,
+    );
+  }
+}
+
 /** Line the two values up on the wider scale — exact, never lossy. */
 function align(a: Decimal, b: Decimal): [bigint, bigint, number] {
+  assertDecimal(a, "left operand");
+  assertDecimal(b, "right operand");
   const exp = Math.max(a.exp, b.exp);
   return [a.v * pow10(exp - a.exp), b.v * pow10(exp - b.exp), exp];
 }

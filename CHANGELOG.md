@@ -9,6 +9,45 @@ yet and saying so is more useful than implying otherwise.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-03
+
+### Fixed
+
+- **`parseDecimal` accepted a missing `exp` and returned a value with no
+  scale.** In plain JS a caller can omit the second argument, and nothing
+  refused it: `frac.length > undefined` is false so the precision check never
+  fired, and `padEnd(undefined)` left the fraction unpadded. The result was
+  `{ v: 10n, exp: undefined }` (fancy-trading-js#1).
+
+  Two consequences, and the second is the one that matters:
+
+  - arithmetic threw `TypeError: Cannot mix BigInt and other types`;
+  - **`formatDecimal` silently returned a different number** —
+    `formatDecimal(parseDecimal("1.0"))` rendered `".10"`, with no error.
+
+  The arithmetic was never wrong. `dec()` already refused a bad `exp`;
+  `parseDecimal` — the only other way in — did not, so it now carries the same
+  guard. The value is REFUSED rather than repaired: nothing downstream can
+  recover a scale that was never recorded, and guessing one is how a price
+  quietly becomes a different price.
+
+  **BREAKING in the sense that matters:** a call that omitted `exp` used to
+  return a wrong value and now throws. Any code it breaks was already computing
+  the wrong number. Pass the scale — `parseDecimal("1.0", 1)`.
+
+### Changed
+
+- **A malformed operand now names itself.** Arithmetic validates its inputs, so
+  a bad value reports `left operand is not a Decimal: expected { v: bigint,
+  exp: integer }` instead of surfacing as a BigInt mixing error from inside
+  `align`. The old message pointed at the arithmetic rather than at whatever
+  produced the input; the reporter said that misdirection cost them a while.
+
+  `ZERO` is a function taking an exp and reads like a constant, so
+  `add(ZERO, x)` — passing the function itself — is called out by name with the
+  fix: `did you mean ZERO(exp)?`
+
+
 ## [0.1.0] - 2026-08-19
 
 ### Added
