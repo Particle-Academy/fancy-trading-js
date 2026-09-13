@@ -9,6 +9,14 @@ yet and saying so is more useful than implying otherwise.
 
 ## [Unreleased]
 
+### Fixed
+
+- **The package description on npm reads "â€”" where it means "—".** The em dash in `package.json` was double-encoded (UTF-8 bytes read as Windows-1252 and saved again), so the registry page and `npm view` showed mojibake. Fixed in the source; it reaches npm with the next release. Nothing to do.
+
+### Security
+
+- Development only: `esbuild` is overridden to `^0.28.1` for GHSA-g7r4-m6w7-qqqr (arbitrary file read from the dev server on Windows), matching the rest of the kit. It is a build tool, not shipped in the package.
+
 ## [0.2.0] - 2026-09-03
 
 ### Fixed

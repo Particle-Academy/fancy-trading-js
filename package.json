@@ -1,7 +1,7 @@
 {
   "name": "@particle-academy/fancy-trading",
   "version": "0.2.0",
-  "description": "Headless trading domain core for the Fancy UI suite \u00e2\u20ac\u201d exact decimal money, instrument shapes across equities/futures/perpetuals/event markets, the FIX-derived order lifecycle, and position + P&L arithmetic with average-cost and FIFO. Zero runtime dependencies.",
+  "description": "Headless trading domain core for the Fancy UI suite — exact decimal money, instrument shapes across equities/futures/perpetuals/event markets, the FIX-derived order lifecycle, and position + P&L arithmetic with average-cost and FIFO. Zero runtime dependencies.",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Particle-Academy/fancy-trading-js.git"
@@ -62,5 +62,8 @@
     "typescript": "^5.8.0",
     "typescript-eslint": "^8.65.0",
     "vitest": "^4.1.11"
+  },
+  "overrides": {
+    "esbuild": "^0.28.1"
   }
 }
