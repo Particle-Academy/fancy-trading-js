@@ -171,7 +171,7 @@ describe("a malformed Decimal names itself", () => {
   test("refuses a missing exp instead of building a scale-less value", () => {
     // @ts-expect-error — the type says exp is required; JS callers can omit it.
     expect(() => parseDecimal("1.0")).toThrow(RangeError);
-    // @ts-expect-error
+    // @ts-expect-error — the same deliberate omission of exp (TS2554 without it); this time the message must name exp.
     expect(() => parseDecimal("1.0")).toThrow(/exp/);
   });
 
