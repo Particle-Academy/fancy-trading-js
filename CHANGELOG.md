@@ -9,6 +9,8 @@ yet and saying so is more useful than implying otherwise.
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-09-13
+
 ### Fixed
 
 - **The package description on npm reads "â€”" where it means "—".** The em dash in `package.json` was double-encoded (UTF-8 bytes read as Windows-1252 and saved again), so the registry page and `npm view` showed mojibake. Fixed in the source; it reaches npm with the next release. Nothing to do.
