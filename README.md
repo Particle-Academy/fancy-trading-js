@@ -1,5 +1,7 @@
 # @particle-academy/fancy-trading
 
+[![Fancified](art/fancified.svg)](https://particle.academy)
+
 Headless trading domain core for the [Fancy UI](https://ui.particle.academy)
 suite. **Zero runtime dependencies.** No React, no network, no opinions about
 how you build a strategy.
