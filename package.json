@@ -27,7 +27,7 @@
   "files": [
     "dist",
     "README.md",
-    "NOTICE"
+    "CHANGELOG.md"
   ],
   "scripts": {
     "test": "vitest run",
