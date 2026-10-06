@@ -21,14 +21,14 @@ jobs:
   allowlist:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
 
       # The allowlist is FETCHED, never vendored: one source of truth, so there
       # is no per-repo copy that can drift out of agreement with it.
       - name: Fetch the third-party allowlist
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: Particle-Academy/.github
           path: .third-party-allowlist
