@@ -9,6 +9,13 @@ yet and saying so is more useful than implying otherwise.
 
 ## [Unreleased]
 
+### Changed
+
+- **Releases need a lab-run certificate.** `publish.yml` gains a read-only
+  `lab-certificate` job that every publishing job needs: a tag is published only
+  when the fancy-labs lab has certified that exact version and commit. Consumers
+  do nothing; this changes how releases are cut, not what the package does.
+
 ### Fixed
 
 - **`CHANGELOG.md` is now in the published tarball.** `files` did not whitelist it, so npm never shipped it — and this package puts breaking changes in MINOR releases and tells you in the README to read the entry before taking one. The instruction existed for the author, who has the file, and not for the consumer, who is the only one being instructed. Nothing for you to do; the file simply arrives from this release on.
@@ -83,7 +90,6 @@ yet and saying so is more useful than implying otherwise.
   `ZERO` is a function taking an exp and reads like a constant, so
   `add(ZERO, x)` — passing the function itself — is called out by name with the
   fix: `did you mean ZERO(exp)?`
-
 
 ## [0.1.0] - 2026-08-19
 
